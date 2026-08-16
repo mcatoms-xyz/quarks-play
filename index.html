@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<title>XYZ Quarks Mobile</title>
+<style>
+/* Dark palette, pulled off the Galaxy Brain logo: deep space ground,
+   violet and pink and cyan for life, gold reserved for the top slot. */
+:root{
+  --paper:#08061c; --card:#151033; --card2:#1d1748; --line:#302a63;
+  --ink:#ecebfb; --muted:#9aa1cc; --dim:#6f77a8;
+  --blue:#5b8cf0; --blue-dark:#3f6cd0;
+  --violet:#a855f7; --pink:#ec4899; --cyan:#38bdf8;
+  --gold:#fbbf24; --gold-ink:#2b1f02;
+  --ok:#4ade80; --bad:#f87171;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased;}
+.wrap{max-width:560px; margin:0 auto; padding:70px 16px 16px; min-height:100%;}
+.wrap.wide{max-width:900px;}
+
+/* Fixed top bar: house flag, game name, whose turn it is. On every screen. */
+.topbar{position:fixed; top:0; left:0; right:0; height:56px; z-index:40;
+  background:rgba(8,6,28,.9); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line); display:flex; align-items:center; gap:11px; padding:0 14px;}
+.tb-flag{line-height:0; flex:0 0 auto; filter:drop-shadow(0 2px 5px rgba(0,0,0,.5));}
+.tb-flag svg{width:26px; height:auto; display:block;}
+@media(max-width:430px){ .tb-title{display:none;} .tb-turn{max-width:132px;} }
+.paused-bar{position:fixed; top:56px; left:0; right:0; z-index:39; text-align:center;
+  background:rgba(251,191,36,.16); border-bottom:1px solid var(--gold); color:var(--gold);
+  font-size:12px; font-weight:800; letter-spacing:1.4px; padding:5px 8px; text-transform:uppercase;}
+.tb-title{font-size:13px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase;
+  background:linear-gradient(90deg,#f0abfc,#38bdf8); -webkit-background-clip:text; background-clip:text;
+  color:transparent; white-space:nowrap;}
+.tb-clock{margin-left:auto; font-variant-numeric:tabular-nums; font-size:12.5px;
+  font-weight:700; color:var(--ink); line-height:1.15; text-align:right; white-space:nowrap;}
+.tb-clock small{display:block; font-size:10px; font-weight:500; color:var(--dim);}
+.tb-btn{background:none; border:0; cursor:pointer; font-size:16px; line-height:1;
+  padding:6px 4px; opacity:.75; min-width:34px; min-height:34px;}
+.tb-btn:hover{opacity:1;}
+.tb-turn{flex:0 0 auto; text-align:right; font-size:11px; color:var(--muted); line-height:1.3;}
+.tb-turn b{display:block; font-size:12.5px; color:var(--ink); font-weight:700;}
+/* Galaxy Brain title block. The logo is dark-native, so it sits on its own night sky
+   instead of being knocked out onto the light paper background. */
+.hero{background:radial-gradient(circle at 50% 42%, #201552 0%, #060320 70%);
+  border:1px solid var(--line); border-radius:18px; padding:14px 16px 16px; text-align:center; margin-top:4px;
+  box-shadow:0 10px 34px rgba(0,0,0,.5);}
+.hero img{display:block; width:100%; max-width:330px; margin:0 auto; height:auto; border-radius:12px;}
+.hero-sub{color:var(--muted); font-size:12px; letter-spacing:1.6px; text-transform:uppercase; margin-top:6px;}
+h1{font-size:22px; color:var(--ink); letter-spacing:.5px;}
+h2{font-size:17px; margin-bottom:8px; color:var(--ink);}
+.sub{color:var(--muted); font-size:13px; margin-top:2px;}
+.card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:14px;
+  box-shadow:0 6px 20px rgba(0,0,0,.35);}
+.btn{display:block; width:100%; border:none; border-radius:12px; padding:14px 16px; font-size:16px; font-weight:700;
+  background:linear-gradient(135deg,var(--violet),var(--blue)); color:#fff; cursor:pointer; margin-top:10px;
+  box-shadow:0 4px 16px rgba(168,85,247,.35);}
+.btn:active{filter:brightness(.88);}
+.btn.ghost{background:transparent; color:var(--cyan); border:2px solid var(--cyan); box-shadow:none;}
+.btn.gold{background:linear-gradient(135deg,#fcd34d,var(--gold)); color:var(--gold-ink);
+  box-shadow:0 4px 18px rgba(251,191,36,.4);}
+.btn.small{width:auto; display:inline-block; padding:8px 14px; font-size:14px; margin-right:8px;}
+.btn:disabled{opacity:.35; cursor:default; box-shadow:none;}
+input[type=text], textarea{width:100%; border:1.5px solid var(--line); border-radius:10px; padding:12px;
+  font-size:16px; margin-top:8px; background:var(--card2); color:var(--ink);}
+input::placeholder, textarea::placeholder{color:var(--dim);}
+textarea{resize:none; height:84px;}
+input:focus, textarea:focus{outline:none; border-color:var(--blue);}
+.code-big{font-size:44px; font-weight:800; letter-spacing:10px; text-align:center; margin:8px 0;
+  background:linear-gradient(90deg,#f0abfc,#38bdf8); -webkit-background-clip:text; background-clip:text;
+  color:transparent;}
+.tag{display:inline-block; font-size:11px; font-weight:700; letter-spacing:.8px; padding:3px 8px; border-radius:20px;
+  background:var(--violet); color:#fff; text-transform:uppercase;}
+.tag.judge{background:var(--gold); color:var(--gold-ink);}
+.tag.wait{background:var(--dim);}
+.players{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+.pchip{background:var(--card2); border:1px solid var(--line); border-radius:20px; padding:6px 12px; font-size:14px;}
+.pchip.gone{opacity:.35; text-decoration:line-through;}
+.pchip .pts{font-weight:700; color:var(--cyan);}
+.botmark{font-size:9px; font-weight:800; letter-spacing:.8px; color:var(--gold);
+  border:1px solid var(--gold); border-radius:4px; padding:0 3px; margin-left:4px; vertical-align:1px;}
+/* Board card: brain art full width, everything you read sits beneath it. */
+.slot{border:2px dashed var(--line); border-radius:14px; padding:10px; margin-top:12px;
+  position:relative; display:block;}
+.slot .bstage{width:100%; height:auto; aspect-ratio:22/15;}
+.slotbody{margin-top:10px; min-width:0;}
+/* Compact variant for the places a full bleed card would just be in the way:
+   the judge's arranging board, the seen stack, and the final summary list. */
+.slot.compact{display:flex; gap:12px; align-items:center; padding:12px;}
+.slot.compact .bstage{width:76px; height:52px; aspect-ratio:auto; flex:0 0 auto;}
+.slot.compact.top .bstage{width:92px; height:62px;}
+.slot.compact .slotbody{margin-top:0; flex:1 1 auto;}
+.slot.pending{opacity:.6; border-style:dashed;}
+.slot.pending .ans{font-size:15px; letter-spacing:1.2px; color:var(--muted);}
+.ptsbadge{float:right; font-weight:800; color:var(--ok);}
+.seen{margin-top:14px; opacity:.75;}
+.slot.filled{border-style:solid; border-color:var(--violet); background:rgba(168,85,247,.14);}
+.slot.revealed{border-color:var(--gold); background:rgba(251,191,36,.10);}
+.slot .lvl{font-size:11px; font-weight:700; letter-spacing:.8px; color:var(--muted); text-transform:uppercase;}
+.slot .ans{font-size:17px; font-weight:600; margin-top:3px; color:var(--ink);}
+.slot .who{font-size:12px; color:var(--muted); margin-top:3px;}
+.slot.top .lvl{color:var(--gold);}
+.pickable{border:1.5px solid var(--line); background:var(--card2); border-radius:10px; padding:12px; margin-top:8px;
+  font-size:16px; cursor:pointer; color:var(--ink);}
+.pickable.sel{border-color:var(--cyan); background:rgba(56,189,248,.14);}
+.pickable.used{opacity:.3; pointer-events:none;}
+.prompt-view{font-size:20px; font-weight:700; text-align:center; padding:18px 8px; line-height:1.35; color:var(--ink);}
+.predrow{display:flex; gap:8px; margin-top:10px;}
+/* Named prediction spots, stacked top down so this reads like the board.
+   Each one carries the same brain panel that spot shows on the board. */
+.predstack{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+.predstack .predbtn{display:flex; align-items:center; gap:12px; text-align:left;
+  padding:9px 12px; font-size:14.5px; letter-spacing:1.2px;}
+.predstack .bstage{width:58px; height:40px;}
+.predstack .predbtn span{flex:1 1 auto; min-width:0;}
+.predbtn{flex:1; border:2px solid var(--line); background:var(--card2); border-radius:10px; padding:14px 4px;
+  font-size:16px; font-weight:700; cursor:pointer; color:var(--ink);}
+.predbtn.sel{border-color:var(--violet); background:var(--violet); color:#fff;
+  box-shadow:0 0 18px rgba(168,85,247,.5);}
+/* GO GALACTIC gets its own row under the ranks. It is the big swing, so it reads as its own move. */
+.galrow{margin-top:8px;}
+.galrow .predbtn{padding:16px 8px; font-size:15px; letter-spacing:1.6px;}
+.predbtn.galactic{border-color:var(--gold); color:var(--gold);
+  background:linear-gradient(135deg, rgba(251,191,36,.14), rgba(236,72,153,.12));}
+.predbtn.galactic.sel{background:linear-gradient(135deg,#fcd34d,var(--gold)); color:var(--gold-ink);
+  box-shadow:0 0 26px rgba(251,191,36,.55);}
+.status{font-size:14px; color:var(--muted); margin-top:10px; text-align:center;}
+.banner{background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(56,189,248,.18));
+  border:1px solid var(--line); color:var(--ink); border-radius:12px; padding:10px 14px; margin-top:14px;
+  display:flex; justify-content:space-between; align-items:center; font-size:14px; font-weight:600;}
+
+/* Big spinner for every screen whose only job is waiting on other people. */
+.waiting{text-align:center; padding:18px 0 6px;}
+.spinner{width:78px; height:78px; margin:0 auto; position:relative;}
+.spinner::before, .spinner::after{content:""; position:absolute; border-radius:50%; border:4px solid transparent;}
+.spinner::before{inset:0; border-top-color:var(--violet); border-right-color:var(--pink);
+  animation:spin 1.1s linear infinite;}
+.spinner::after{inset:13px; border-bottom-color:var(--cyan); border-left-color:var(--violet);
+  animation:spin 1.7s linear infinite reverse;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.waiting .wmsg{font-size:16px; font-weight:700; color:var(--ink); margin-top:16px;}
+.waiting .wsub{font-size:13.5px; color:var(--muted); margin-top:5px;}
+.scorelist{margin-top:8px;}
+.scorerow{display:flex; justify-content:space-between; padding:8px 4px; border-bottom:1px solid var(--line); font-size:15px;}
+.scorerow .delta{color:var(--ok); font-weight:700;}
+.hidden{display:none !important;}
+.center{text-align:center;}
+.footnote{font-size:11px; color:var(--dim); text-align:center; margin-top:20px; padding-bottom:20px;}
+.hostadmin{margin-top:16px; text-align:right;}
+.hostadmin button{background:none; border:1px solid var(--line); border-radius:8px; color:var(--dim);
+  font-size:12px; padding:6px 10px; cursor:pointer;}
+.conn{position:fixed; top:62px; right:12px; font-size:10px; color:var(--dim); z-index:35;}
+.conn.bad{color:var(--bad); font-weight:700;}
+.hl{color:var(--gold); font-weight:800; background:rgba(251,191,36,.16); border-radius:4px; padding:0 3px;}
+.dots{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+.dot{width:28px; height:28px; border-radius:50%; cursor:pointer; border:3px solid transparent; box-shadow:0 1px 2px rgba(0,0,0,.15);}
+.dot.sel{border-color:#fff; box-shadow:0 0 12px rgba(255,255,255,.6);}
+.cdot{display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:baseline;}
+@keyframes rise{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+#p-main > *{animation:rise .3s ease;}
+@keyframes flipIn{from{transform:rotateX(85deg); opacity:0}to{transform:none; opacity:1}}
+.slot.revealed{animation:flipIn .55s ease; transform-origin:center top;}
+.bstage{flex:0 0 auto; width:76px; height:52px; object-fit:cover; border-radius:8px; display:block; background:#0a0f1f;}
+.b0{filter:grayscale(60%) brightness(.72); opacity:.85;}
+.b1{box-shadow:0 0 16px rgba(168,85,247,.6);}
+.b2{box-shadow:0 0 12px rgba(251,191,36,.6), 0 0 34px rgba(236,72,153,.4);}
+@keyframes gpulse{0%,100%{box-shadow:0 0 12px rgba(251,191,36,.3)}50%{box-shadow:0 0 30px rgba(251,191,36,.7)}}
+.slot.top.revealed{background:linear-gradient(180deg,rgba(251,191,36,.2),rgba(236,72,153,.14));
+  animation:flipIn .55s ease, gpulse 2.4s ease infinite;}
+.dimprompt{color:var(--muted); font-weight:500;}
+.winner-label{font-size:12px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-top:10px;}
+.winner-big{font-size:36px; font-weight:800; color:var(--gold); text-shadow:0 1px 0 #b07f0e; margin:4px 0 2px;}
+.confetti{position:fixed; top:-20px; width:10px; height:16px; z-index:99; pointer-events:none;
+  animation:fall linear forwards;}
+@keyframes fall{to{transform:translateY(108vh) rotate(720deg);}}
+
+/* ===== GALAXY BRAIN LASERS =====
+   Rays fire out of the top slot on .compact cards ONLY, which in practice means the
+   summary board. They are deliberately NOT on the focus card (Adam, 8/15).
+
+   🔑 The reason, so nobody "restores" them: the focus card is tall with a full-bleed
+   image, so a centred ray field lands almost entirely inside the artwork, and
+   brain-4.png is ALREADY a cosmic brain firing light rays. Gold rays over a bright
+   picture of rays is invisible by construction, at any z-index. The compact card is
+   short and wide with a small thumbnail, so the same field lands on dark card
+   background and reads. Same effect, opposite result, purely because of layout.
+   The focus card's big moment is the artwork plus the gold border (gpulse/winFlash).
+
+   Three layers inside the card, and the order matters: art at 1, rays at 2, text at 3.
+   The rays used to sit at 0, which was fine while the art was a 76px thumbnail and
+   invisible the moment the card went art-first and the image became width:100%.
+   The card CLIPS the rays (overflow:hidden). Letting them escape a short .compact
+   card is what put them on top of the neighbouring card on the summary board.
+   Centering stays on margin, not transform, because laserIn wants the transform
+   channel for its scale-in. */
+.slot{overflow:hidden;}
+.slot > *{position:relative; z-index:1;}
+.slot > .slotbody{z-index:3;}
+/* Gold label on gold rays is the one thing the ray field costs us. Above it in the
+   stack is not the same as readable on it, so the top card's text carries a shadow. */
+.slot.top.revealed .slotbody{text-shadow:0 1px 3px rgba(10,15,31,.92);}
+.slot > .lasers{position:absolute; left:50%; top:50%; width:480px; height:480px; margin:-240px 0 0 -240px;
+  pointer-events:none; z-index:2; animation:laserIn .75s ease both;}
+.lasers::before, .lasers::after{content:""; position:absolute; inset:0; border-radius:50%;}
+/* screen blend so the rays LIGHT the art rather than cover it, and a mask that dips
+   in the very centre so the brain still reads through the middle of the starburst. */
+.lasers::before{background:repeating-conic-gradient(from 0deg,
+    rgba(251,191,36,.8) 0deg 2.2deg, rgba(236,72,153,.5) 2.2deg 4.2deg, transparent 4.2deg 20deg);
+  -webkit-mask-image:radial-gradient(circle, rgba(0,0,0,.3) 0%, #000 16%, rgba(0,0,0,.5) 38%, transparent 64%);
+  mask-image:radial-gradient(circle, rgba(0,0,0,.3) 0%, #000 16%, rgba(0,0,0,.5) 38%, transparent 64%);
+  mix-blend-mode:screen;
+  animation:laserSpin 9s linear infinite;}
+.lasers::after{box-shadow:inset 0 0 0 2px rgba(251,191,36,.6); animation:shock 1.2s ease-out both;}
+@keyframes laserSpin{to{transform:rotate(360deg);}}
+@keyframes laserIn{from{opacity:0; transform:scale(.5);} to{opacity:1; transform:scale(1);}}
+@keyframes shock{0%{opacity:.9; transform:scale(.2);} 100%{opacity:0; transform:scale(1.2);}}
+
+/* The card that just turned over, and the ones sliding down behind it. */
+.slot.focus{animation:cardIn .5s cubic-bezier(.2,1.25,.35,1) both;}
+.seen .slot:first-child{animation:dropIn .45s ease both;}
+@keyframes cardIn{from{opacity:0; transform:translateY(-22px) scale(.94);} to{opacity:1; transform:none;}}
+@keyframes dropIn{from{opacity:0; transform:translateY(-46px);} to{opacity:1; transform:none;}}
+
+/* Your own card, called out with the box itself rather than words over the top. */
+.slot.mine{border-color:var(--cyan);}
+.slot.focus.mine{animation:cardIn .5s cubic-bezier(.2,1.25,.35,1) both, mineFlash 1.5s ease-out 3;}
+@keyframes mineFlash{0%,100%{box-shadow:0 0 0 0 rgba(56,189,248,0);}
+  35%{box-shadow:0 0 26px 3px rgba(56,189,248,.6);}}
+.slot.focus.top.mine{animation:cardIn .5s cubic-bezier(.2,1.25,.35,1) both, winFlash 1.6s ease-out 3;}
+@keyframes winFlash{0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0); border-color:var(--gold);}
+  30%{box-shadow:0 0 34px 6px rgba(251,191,36,.7); border-color:#fff;}}
+
+@media(prefers-reduced-motion:reduce){
+  .lasers::before{animation:none;}
+  .lasers, .slot.focus, .seen .slot:first-child{animation-duration:.01ms;}
+  .slot.focus.mine, .slot.focus.top.mine{animation:none;}
+  .spinner::before, .spinner::after{animation-duration:2.4s;}
+}
+
+/* ---- launcher: the app grid ----
+   Home is a shelf of games, not a game. Tiles come from the registry, so a game
+   appears here by registering rather than by anyone editing this file. */
+.masthead{text-align:center; padding:8px 0 2px;}
+.masthead .mh-title{font-size:22px; font-weight:800; letter-spacing:2px; text-transform:uppercase;
+  background:linear-gradient(90deg,var(--violet),var(--cyan)); -webkit-background-clip:text;
+  background-clip:text; color:transparent;}
+.masthead .mh-sub{color:var(--muted); font-size:12px; letter-spacing:1.4px; text-transform:uppercase; margin-top:4px;}
+.applist{display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:18px;}
+@media(min-width:560px){ .applist{grid-template-columns:repeat(3,1fr);} }
+.app{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:12px;
+  text-align:center; cursor:pointer; transition:transform .12s ease, border-color .12s ease;}
+.app:active{transform:scale(.97);}
+.app:hover{border-color:var(--violet);}
+.app.soon{opacity:.5; cursor:default;}
+.app.soon:hover{border-color:var(--line);}
+.appart{width:100%; aspect-ratio:1; border-radius:14px; object-fit:cover; display:block; background:#0a0f1f;}
+/* Games without art yet get an honest placeholder rather than borrowed art. */
+.appph{width:100%; aspect-ratio:1; border-radius:14px; display:flex; align-items:center; justify-content:center;
+  font-size:30px; font-weight:800; letter-spacing:1px; color:rgba(255,255,255,.82);
+  background:linear-gradient(145deg,#241a5c,#0d1030); border:1px dashed var(--line);}
+.appname{font-size:14px; font-weight:700; margin-top:9px; line-height:1.25;}
+.appmeta{font-size:11px; color:var(--dim); margin-top:3px;}
+.soonbadge{display:inline-block; font-size:10px; font-weight:700; letter-spacing:1px; text-transform:uppercase;
+  color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:2px 8px; margin-top:6px;}
+.backlink{display:inline-block; margin-bottom:2px; color:var(--dim); font-size:13px; cursor:pointer;}
+.backlink:hover{color:var(--ink);}
+
+/* ---- Simpatico: transformation cards, puzzle board, guesses ---- */
+.tlist{display:flex; flex-direction:column; gap:8px; margin:12px 0;}
+.tlist.small{margin:10px 0 0;}
+.tcard{position:relative; background:#fdf6e8; color:#1b1630; border-radius:10px; border:3px solid var(--line);
+  padding:8px 10px 8px 34px; text-align:left; box-shadow:0 2px 0 rgba(0,0,0,.3);}
+.tnum{position:absolute; left:8px; top:50%; transform:translateY(-50%); width:20px; height:20px;
+  border-radius:50%; background:var(--violet); color:#fff; font-size:12px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;}
+.tsuit{position:absolute; left:10px; bottom:4px; font-size:11px;}
+.tname{display:block; font-weight:800; font-size:15px; line-height:1.15;}
+.thint{display:block; font-size:11px; color:#5a5470; margin-top:1px;}
+.tpick{cursor:pointer; border-radius:12px; padding:2px;}
+.tpick.sel{background:rgba(56,189,248,.25); box-shadow:0 0 0 2px var(--cyan);}
+.puzzle{border:1px solid var(--line); border-radius:14px; padding:12px; margin-top:12px;}
+.livewrap{position:sticky; top:56px; z-index:5; background:var(--card); padding:8px 0 6px; margin:0 -2px;}
+.livechain{display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap;
+  font-size:16px; line-height:1.3; min-height:26px;}
+.livechain b{color:var(--gold);}
+.livechain .blank{display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px;
+  border:2px dashed var(--line); border-radius:6px; color:var(--dim); font-size:12px;}
+.livechain .ar{color:var(--dim); font-size:13px;}
+.eg{font-size:12px; color:var(--muted); background:rgba(255,255,255,.04); border-radius:9px;
+  padding:9px 11px; margin-top:10px; line-height:1.5;}
+.eg b{color:var(--ink);} .eg i{color:var(--cyan); font-style:normal;}
+.chainstep{display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:13px;
+  margin:14px 0 5px; padding-left:2px;}
+.stepnum{width:20px; height:20px; border-radius:50%; background:var(--violet); color:#fff;
+  font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex:0 0 auto;}
+.chainstep .thint{display:inline; color:var(--dim); font-size:11px;}
+.chainstep .arrow{color:var(--dim); font-size:11px; margin-left:auto;}
+.chain{display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
+  font-size:19px; padding:6px 0 2px;}
+.chain .link{width:30px; height:30px; border-radius:8px; border:2px dashed var(--line);
+  display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:14px;}
+.prow{display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:4px 0; font-size:17px;}
+.plab{font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--muted);}
+.bigword{text-align:center; font-size:30px; font-weight:800; color:var(--gold); margin:14px 0 6px;}
+.guesslist{display:flex; flex-direction:column; gap:6px; margin-top:12px;}
+.grow{display:flex; justify-content:space-between; gap:10px; align-items:center;
+  border-radius:9px; padding:9px 11px; font-size:14px; border:1px solid var(--line);}
+.grow.hit{border-color:rgba(63,166,99,.7); background:rgba(63,166,99,.14);}
+.grow.miss{opacity:.72;}
+.gnote{font-size:10px; letter-spacing:.6px; text-transform:uppercase; color:var(--gold); margin-left:6px;}
+/* The Wordsmith taps this to overturn whether a guess counted, so it decides
+   points. It was 16x13px. Now a chip with a real hit area. */
+.ovr{display:inline-block; color:var(--muted); font-size:11px; margin-left:8px;
+  border:1px solid var(--line); border-radius:999px; padding:7px 12px; min-height:32px;
+  line-height:18px; box-sizing:border-box; text-decoration:none;}
+.ovr:hover{color:var(--ink); border-color:var(--violet);}
+
+/* ---- Opening Act: hand of cards, band names ---- */
+.hand{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:12px;}
+@media(min-width:420px){ .hand{grid-template-columns:repeat(3,1fr);} }
+.wcard{background:#fdf6e8; color:#1b1630; border-radius:10px; padding:12px 30px 12px 8px; text-align:center;
+  font-weight:700; font-size:13px; line-height:1.2; cursor:pointer; min-height:64px;
+  display:flex; align-items:center; justify-content:center; border:3px solid transparent;
+  box-shadow:0 2px 0 rgba(0,0,0,.35); transition:transform .1s ease;}
+.wcard:active{transform:scale(.96);}
+.wcard.sel{border-color:var(--cyan); box-shadow:0 0 16px rgba(56,189,248,.55);}
+.wcard{position:relative;}
+.wcard.dump{opacity:.45; text-decoration:line-through; border-color:#d0342c;}
+/* 🔑 THUMB SIZE. This was a 16x17px glyph sitting on top of a card whose main
+   tap does something completely different, which on a phone means you dump the
+   card you meant to play. The mark stays small; the HIT AREA is 34px and the
+   card reserves room for it so the text never runs underneath. */
+.dumpx{position:absolute; top:0; right:0; width:34px; height:34px;
+  display:flex; align-items:flex-start; justify-content:flex-end; padding:4px 6px 0 0;
+  font-size:12px; line-height:1; color:#8a8398; box-sizing:border-box;}
+.wcard.dump .dumpx{color:#d0342c;}
+.sugg{display:inline-block; color:var(--cyan); text-decoration:underline;
+  margin:4px 6px 0 0; padding:7px 4px; min-height:30px; line-height:16px; box-sizing:border-box;}
+.sugg.more{color:var(--dim);}
+.askline{text-align:center; font-size:12px; letter-spacing:1.4px; text-transform:uppercase; color:var(--muted); margin-bottom:6px;}
+.bandname{margin-top:14px; text-align:center; font-size:20px; font-weight:800; letter-spacing:.4px;
+  color:var(--gold); min-height:26px;}
+.bandlist{margin-top:12px; display:flex; flex-direction:column; gap:8px;}
+.band{border:2px solid var(--line); border-radius:12px; padding:13px 14px; font-size:17px; font-weight:700;}
+.band.pickable{cursor:pointer;}
+.band.mine{border-color:var(--cyan);}
+.booked{text-align:center; border:2px solid var(--gold); border-radius:14px; padding:14px; margin-top:12px;
+  background:linear-gradient(180deg,rgba(251,191,36,.16),rgba(236,72,153,.10));}
+.booked .lvl{color:var(--gold);}
+
+/* game length picker, lobby, host only */
+.lenbox{border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:14px; text-align:left;}
+.lentabs{display:flex; gap:8px; margin:8px 0 10px;}
+.lenrow{display:flex; gap:8px; flex-wrap:wrap;}
+.lenrow.off{display:none;}
+.lenchip{background:rgba(255,255,255,.06); color:var(--ink); border:1px solid var(--line);
+  border-radius:999px; padding:8px 14px; font:inherit; font-size:13px; font-weight:600; cursor:pointer;}
+.lenchip.on{background:var(--violet); border-color:var(--violet); color:#fff;}
+.lenbox .status{margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="tb-flag" title="XYZ Quarks">
+  <svg viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M0,0 H100 V116 L50,148 L0,116 Z" fill="#3769BE"/>
+    <text x="50" y="47" text-anchor="middle" fill="#fff" font-size="31" font-weight="800"
+          font-family="Poppins,Helvetica,Arial,sans-serif" letter-spacing="1">XYZ</text>
+    <text x="50" y="69" text-anchor="middle" fill="#fff" font-size="16" font-weight="600"
+          font-family="Poppins,Helvetica,Arial,sans-serif" letter-spacing="1.2">QUARKS</text>
+    <g stroke="#fff" stroke-width="2.8" fill="none" opacity=".95">
+      <ellipse cx="50" cy="103" rx="34" ry="13"/>
+      <ellipse cx="50" cy="103" rx="34" ry="13" transform="rotate(60 50 103)"/>
+      <ellipse cx="50" cy="103" rx="34" ry="13" transform="rotate(-60 50 103)"/>
+    </g>
+    <g fill="#fff">
+      <circle cx="84" cy="103" r="4.2"/>
+      <circle cx="33" cy="74" r="4.2"/>
+      <circle cx="67" cy="132" r="4.2"/>
+    </g>
+  </svg>
+  </div>
+  <div class="tb-title" id="tb-title">XYZ Quarks</div>
+  <div class="tb-clock" id="tb-clock" title="This turn / whole game"></div>
+  <button class="tb-btn hidden" id="tb-pause" onclick="sendPause()" title="Pause the game">&#9208;</button>
+  <button class="tb-btn" id="tb-mute" onclick="toggleMute()" title="Sound on or off">&#128266;</button>
+  <div class="tb-turn" id="tb-turn"></div>
+</div>
+<div class="conn" id="conn">connecting</div>
+
+<!-- ============ LAUNCHER ============ -->
+<div class="wrap" id="v-home">
+  <div class="masthead">
+    <div class="mh-title">XYZ Quarks Mobile</div>
+    <div class="mh-sub">Quick to teach, quick to play, plays with anyone</div>
+  </div>
+  <div class="applist" id="v-grid"></div>
+  <!-- A room code already knows which game it belongs to, so joining never asks
+       you to pick one. Host lives inside a game, because hosting does. -->
+  <div class="card">
+    <h2>Got a code?</h2>
+    <div class="sub">Join a room someone else is hosting. You'll land in whatever they're playing.</div>
+    <input type="text" id="j-code" placeholder="Room code" maxlength="4" autocapitalize="characters" autocomplete="off" style="text-transform:uppercase">
+    <input type="text" id="j-name" placeholder="Your name" maxlength="14" autocomplete="off">
+    <div class="dots" id="j-dots"></div>
+    <button class="btn" onclick="joinGame()">Join</button>
+    <div class="status" id="j-status"></div>
+  </div>
+  <div class="card">
+    <h2>How it works</h2>
+    <div class="sub" style="line-height:1.5">Everyone plays on their own phone or browser window.
+    One person hosts, which just means their device runs the room. The host plays like everybody else.
+    Share the room code, play together, in person or over a call.</div>
+  </div>
+  <div class="footnote">An XYZ Game Labs prototype.</div>
+</div>
+
+<!-- ============ ONE GAME, BEFORE IT STARTS ============ -->
+<div class="wrap hidden" id="v-game">
+  <div class="backlink" onclick="backToLauncher()">&#8592; All games</div>
+  <div class="hero">
+    <img id="g-art" src="" alt="">
+    <div id="g-name" class="mh-title" style="display:none; font-size:30px"></div>
+    <div class="hero-sub" id="g-sub"></div>
+  </div>
+  <div class="card">
+    <h2>Host a game</h2>
+    <div class="sub">Creates a room and puts you in it as player one.</div>
+    <input type="text" id="h-name" placeholder="Your name" maxlength="14" autocomplete="off">
+    <div class="dots" id="h-dots"></div>
+    <button class="btn" onclick="hostGame()">Host a game</button>
+  </div>
+  <div class="card" id="g-about"></div>
+</div>
+
+<!-- ============ PLAYER ============ -->
+<div class="wrap hidden" id="v-play">
+  <div class="banner">
+    <span><span id="p-name"></span> <span class="tag hidden" id="p-role"></span></span>
+    <span id="p-score"></span>
+  </div>
+  <div class="card" id="p-main">
+    <div class="status">Waiting for the host to start...</div>
+  </div>
+  <div class="footnote" id="p-room"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="engine.js?v=9d3bb510"></script>
+<script src="games/galaxy-brain.js?v=b63f3439"></script>
+<script src="games/opening-act.js?v=cf279c05"></script>
+<script src="games/simpatico.js?v=66c282bf"></script>
+<script src="games/coming-soon.js?v=446d6f93"></script>
+</body>
+</html>

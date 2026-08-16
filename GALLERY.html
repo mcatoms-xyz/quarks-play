@@ -1,0 +1,140 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Galaxy Brain, screen gallery (live)</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:24px;background:#0f1524;color:#e8ecf6;
+  font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+h1{font-size:20px;margin:0 0 4px}
+h1 .live{font-size:12px;color:#7fc08f;font-weight:400;margin-left:8px}
+.sub{color:#93a0bd;font-size:12.5px}
+.legend{background:#161f36;border-left:3px solid #3769BE;padding:12px 15px;border-radius:6px;
+  font-size:13px;color:#c3cddf;margin:16px 0 24px;max-width:980px}
+.legend b{color:#fff}
+code{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px;color:#e8a91c}
+.controls{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+button{background:#222e4a;color:#c3cddf;border:1px solid #33415f;border-radius:6px;
+  padding:7px 13px;font-size:12.5px;cursor:pointer;font-family:inherit}
+button:hover{background:#2d3c5f;color:#fff}
+button.on{background:#3769BE;border-color:#3769BE;color:#fff}
+.grid{display:flex;flex-wrap:wrap;gap:22px}
+figure{margin:0}
+figcaption{font-size:12px;color:#93a0bd;margin-bottom:7px;display:flex;align-items:baseline;gap:8px}
+figcaption b{color:#e8ecf6;font-size:13px}
+figcaption .k{font-family:ui-monospace,monospace;font-size:10.5px;color:#6d7c9c}
+.vp{border:1px solid #2b3a5c;border-radius:10px;overflow:hidden;background:#08061c}
+iframe{border:0;display:block}
+.note{margin-top:28px;color:#6d7c9c;font-size:12px;max-width:980px}
+</style></head><body>
+
+<h1>Galaxy Brain, screen gallery <span class="live">LIVE</span></h1>
+<div class="sub">Every panel below is the real app running <code>index.html</code>, not a screenshot.</div>
+
+<div class="legend">
+<b>Each frame boots the real render functions against a canned game state</b>, so this page cannot drift
+from the build. Change the app and refresh here, and the change shows up. State is a 4 player room
+(Adam, Noah, Jordan, Brendan) mid game, Noah judging, 3 board slots.<br>
+Frames are live and clickable, but the buttons do nothing, since there is no room and no network behind them.
+</div>
+
+<div class="controls">
+  <span class="sub">Width:</span>
+  <button data-w="390" class="on">390 phone</button>
+  <button data-w="430">430 phone large</button>
+  <button data-w="768">768 tablet</button>
+  <button id="reload">Reload all</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="note">
+Screens come from the <code>*_SCREENS</code> map inside each game module under <code>games/</code>. Add a key there and it appears here
+automatically, no edit to this file needed. <span id="srcnote"></span>
+</div>
+
+<script>
+const H = 760;
+let W = 390;
+
+/* Fallback list, used when the page is opened straight off disk. Browsers block
+   fetch() on file:// URLs, so over http this reads the live list out of the app
+   and stays in sync automatically; off disk it falls back to this copy. */
+const FALLBACK = [
+  ["home","Launcher, the game grid"],
+  ["lobby-host","Lobby, host view"],
+  ["lobby-player","Lobby, joined player"],
+  ["prompt-judge","Judge picks the prompt"],
+  ["prompt-wait","Thinker waits for the prompt"],
+  ["write","Thinker writes and predicts"],
+  ["write-judge","Judge waits on answers"],
+  ["place-wait","Thinker waits on the board"],
+  ["arrange","Judge builds the board"],
+  ["reveal-start","Reveal, first card up"],
+  ["reveal-low","Reveal, rolling on the timer"],
+  ["reveal-paused","Reveal, judge hit pause"],
+  ["reveal-mid","Reveal, middle spot turned"],
+  ["reveal-galaxy","Reveal, GALAXY BRAIN lands"],
+  ["reveal-mine","GALAXY BRAIN lands on you"],
+  ["reveal-summary","The whole board, with points"],
+  ["score","Round scoreboard"],
+  ["end","Game over, winner and confetti"]
+];
+
+/* Screens live in the GAME MODULES now, one <ID>_SCREENS map per game, so this
+   reads index.html only to find out which modules exist and then reads each of
+   them. Adding a game puts its screens here with no edit to this file.
+   ⚠️ Before the engine split this scraped "const SCREENS" out of index.html.
+   After the split that name was gone, the scrape quietly returned nothing, and
+   the gallery fell through to the hardcoded FALLBACK below without saying so.
+   A silent fallback in a tool whose whole job is to not drift is worse than a
+   loud failure, which is why a failed scrape now says so on the page. */
+async function loadKeys(){
+  try{
+    const shell = await (await fetch("index.html")).text();
+    /* The deployed index.html carries a ?v=<hash> cache stamp on every module,
+       so the path has to be matched with an optional query string. Without the
+       "?" branch this silently found zero modules on the LIVE build and worked
+       fine locally, which is the worst shape a bug can have. */
+    const mods = [...shell.matchAll(/<script src="(games\/[^"?]+)(?:\?[^"]*)?"/g)].map(m => m[1]);
+    const keys = [];
+    for(const f of mods){
+      const src = await (await fetch(f)).text();
+      const block = src.match(/const [A-Z0-9_]*SCREENS = \{([\s\S]*?)\n\};/);
+      if(!block) continue;
+      const re = /"([a-z0-9-]+)":\s*"([^"]+)"/g; let m;
+      while((m = re.exec(block[1]))) keys.push([m[1], m[2]]);
+    }
+    if(keys.length) return [["home","Launcher, the game grid"], ...keys];
+    document.getElementById("srcnote").textContent =
+      "Loaded the app but found no screen maps in it. This list may be stale.";
+    return FALLBACK;
+  }catch(e){ /* file:// blocks fetch, fall through */ }
+  document.getElementById("srcnote").textContent =
+    "Opened off disk, so this is using the built in screen list. Serve the folder to read it live from the app.";
+  return FALLBACK;
+}
+
+function build(keys){
+  const grid = document.getElementById("grid");
+  grid.innerHTML = keys.map(([k, label]) => `
+    <figure>
+      <figcaption><b>${label}</b><span class="k">?screen=${k}</span></figcaption>
+      <div class="vp" style="width:${W}px;height:${H}px">
+        <iframe src="index.html?screen=${k}" width="${W}" height="${H}" loading="lazy"></iframe>
+      </div>
+    </figure>`).join("");
+}
+
+let KEYS = [];
+loadKeys().then(k => { KEYS = k; build(KEYS); });
+
+document.querySelectorAll("button[data-w]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("button[data-w]").forEach(x => x.classList.remove("on"));
+  b.classList.add("on");
+  W = +b.dataset.w;
+  build(KEYS);
+});
+document.getElementById("reload").onclick = () => build(KEYS);
+</script>
+</body></html>
